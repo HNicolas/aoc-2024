@@ -1,0 +1,26 @@
+{
+	"name": "Deno",
+	"dockerFile": "Dockerfile",
+	"workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+	"workspaceFolder": "/workspace",
+	"features": {
+		"ghcr.io/devcontainers/features/git:1": {}
+	},
+	"remoteUser": "deno",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"denoland.vscode-deno"
+			],
+			"settings": {
+				"terminal.integrated.defaultProfile.linux": "bash",
+				"deno.enable": true,
+				"deno.lint": true,
+				"editor.formatOnSave": true,
+				"[typescript]": {
+					"editor.defaultFormatter": "denoland.vscode-deno"
+				}
+			}
+		}
+	}
+}
