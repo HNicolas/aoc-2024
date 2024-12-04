@@ -13,13 +13,7 @@
 				"denoland.vscode-deno"
 			],
 			"settings": {
-				"terminal.integrated.defaultProfile.linux": "bash",
-				"deno.enable": true,
-				"deno.lint": true,
-				"editor.formatOnSave": true,
-				"[typescript]": {
-					"editor.defaultFormatter": "denoland.vscode-deno"
-				}
+				"terminal.integrated.defaultProfile.linux": "bash"
 			}
 		}
 	}
