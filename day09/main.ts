@@ -1,107 +1,86 @@
 import { join } from "@std/path";
 
-function solve1(input: string): number {
-  const original = input.split("").map((n) => parseInt(n, 10));
-  const compressed: number[] = [];
-  let fileIndex = 0;
-  let fileNegativeIndex = -1;
+type Block = {
+  index: number;
+  length: number;
+};
 
-  let startCursor = 0;
-  let endCursor = (original.length - 1) % 2 === 0
-    ? original.length - 1
-    : original.length - 2;
-  let remainingAtEndCursor = original[endCursor];
+type FileBlock = Block & { id: number };
 
-  while (startCursor < endCursor) {
-    const value = original[startCursor];
-    if (value === 0) {
-      startCursor += 1;
-      continue;
-    }
+type DiskScan = {
+  files: FileBlock[];
+  freeSpaces: Block[];
+};
 
-    if (startCursor % 2 == 0) {
-      // file
-      for (let i = 0; i < value; i += 1) {
-        compressed.push(fileIndex);
-      }
-      fileIndex += 1;
-    } else {
-      // empty space
-      for (let i = 0; i < value; i += 1) {
-        if (remainingAtEndCursor > 0) {
-          compressed.push(fileNegativeIndex);
-          remainingAtEndCursor -= 1;
-        } else {
-          while (endCursor - 2 > startCursor && remainingAtEndCursor === 0) {
-            endCursor -= 2;
-            remainingAtEndCursor = original[endCursor];
-          }
+function scanDisk(disk: number[]): DiskScan {
+  const files: FileBlock[] = [];
+  const freeSpaces: Block[] = [];
 
-          if (remainingAtEndCursor > 0) {
-            fileNegativeIndex -= 1;
-            compressed.push(fileNegativeIndex);
-            remainingAtEndCursor -= 1;
-          }
-        }
-      }
-    }
-    startCursor += 1;
-  }
-
-  while (remainingAtEndCursor > 0) {
-    compressed.push(fileNegativeIndex);
-    remainingAtEndCursor -= 1;
-  }
-
-  return compressed.map((v) => v >= 0 ? v : fileIndex - fileNegativeIndex + v)
-    .reduce((acc, curr, index) => acc + index * curr, 0);
-}
-
-function solve2(input: string): number {
-  const original = input.split("").map((n) => parseInt(n, 10));
-
-  let startIndex = 0;
-  // file ID, startIndex, length
-  let fileId = 0;
-  const files: { id: number; startIndex: number; length: number }[] = [];
-  // length/startindex (don't forget to update when moving one)
-  const freeSpaces: { startIndex: number; length: number }[] = [];
-  for (let i = 0; i < original.length; i += 1) {
-    const blockLength = original[i];
+  let id = 0;
+  let index = 0;
+  for (let i = 0; i < disk.length; i += 1) {
+    const blockLength = disk[i];
     if (blockLength === 0) continue;
 
     if (i % 2 === 0) {
       files.push({
-        id: fileId++,
-        startIndex,
+        id: id++,
+        index,
         length: blockLength,
       });
     } else {
       freeSpaces.push({
-        startIndex,
+        index,
         length: blockLength,
       });
     }
-    startIndex += blockLength;
+    index += blockLength;
   }
+  return { files, freeSpaces };
+}
 
-  for (let i = 0; i < files.length; i += 1) {
-    const file = files.at(-1 - i)!;
-    const foundIndex = freeSpaces.findIndex((freeSpace) =>
-      freeSpace.length >= file.length && freeSpace.startIndex < file.startIndex
-    );
-    if (foundIndex === -1) continue;
+function solve(input: string, fragmentFiles = true): number {
+  const disk = input.split("").map((n) => parseInt(n, 10));
+  const { files, freeSpaces } = scanDisk(disk);
 
-    const freeSpace = freeSpaces[foundIndex];
-    file.startIndex = freeSpace.startIndex;
-    freeSpace.startIndex += file.length;
-    freeSpace.length -= file.length;
+  loop: for (let i = files.length - 1; i >= 0; i -= 1) {
+    const file = files[i];
+
+    if (fragmentFiles) {
+      while (file.length > 0) {
+        const freeSpaceIndex = freeSpaces.findIndex((freeSpace) =>
+          freeSpace.length > 0 && freeSpace.index < file.index
+        );
+        if (freeSpaceIndex === -1) break loop;
+
+        const freeSpace = freeSpaces[freeSpaceIndex];
+        const moved = Math.min(freeSpace.length, file.length);
+        files.push({
+          id: file.id,
+          index: freeSpace.index,
+          length: moved,
+        });
+        file.length -= moved;
+        freeSpace.index += moved;
+        freeSpace.length -= moved;
+      }
+    } else {
+      const freeSpaceIndex = freeSpaces.findIndex((freeSpace) =>
+        freeSpace.length >= file.length && freeSpace.index < file.index
+      );
+      if (freeSpaceIndex === -1) continue;
+
+      const freeSpace = freeSpaces[freeSpaceIndex];
+      file.index = freeSpace.index;
+      freeSpace.index += file.length;
+      freeSpace.length -= file.length;
+    }
   }
 
   return files.reduce(
     (acc, curr) => {
       for (let i = 0; i < curr.length; i += 1) {
-        acc += (curr.startIndex + i) * curr.id;
+        acc += (curr.index + i) * curr.id;
       }
       return acc;
     },
@@ -112,5 +91,5 @@ function solve2(input: string): number {
 const path = join(import.meta.dirname ?? "", "input.txt");
 // const path = join(import.meta.dirname ?? "", "sample.txt");
 const input = await Deno.readTextFile(path);
-console.log(solve1(input));
-console.log(solve2(input));
+console.log(solve(input));
+console.log(solve(input, false));
